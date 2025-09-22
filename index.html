@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Tus flores amarillas Pau</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        let flowers = [];
+        let flyingPetals = [];
+        let grassBlades = [];
+        let sun;
+        let clouds = [];
+        let messageOpacity = 0;
+
+        function drawMountains() {
+            // Primera cadena montañosa (más oscura y lejana)
+            fill(60, 90, 60);
+            noStroke();
+            beginShape();
+            vertex(0, height * 0.7);
+            for(let x = 0; x <= width; x += 50) {
+                let y = height * 0.7 - (noise(x * 0.002) * height * 0.3);
+                vertex(x, y);
+            }
+            vertex(width, height * 0.7);
+            endShape(CLOSE);
+
+            // Segunda cadena montañosa (más clara y cercana)
+            fill(80, 120, 80);
+            beginShape();
+            vertex(0, height * 0.75);
+            for(let x = 0; x <= width; x += 30) {
+                let y = height * 0.75 - (noise(x * 0.003 + 1000) * height * 0.25);
+                vertex(x, y);
+            }
+            vertex(width, height * 0.75);
+            endShape(CLOSE);
+        }
+
+        function drawMeadows() {
+            // Prado verde ondulante
+            let meadowGradient = drawingContext.createLinearGradient(0, height * 0.7, 0, height);
+            meadowGradient.addColorStop(0, color(65, 155, 65));
+            meadowGradient.addColorStop(1, color(34, 139, 34));
+            drawingContext.fillStyle = meadowGradient;
+            drawingContext.fillRect(0, height * 0.7, width, height * 0.3);
+
+            // Detalles del prado (pequeñas flores y hierbas)
+            for(let i = 0; i < 100; i++) {
+                let x = random(width);
+                let y = random(height * 0.75, height);
+                let size = random(2, 5);
+                
+                // Pequeñas flores silvestres
+                if(random() > 0.7) {
+                    fill(255, 255, random(200, 255));
+                    circle(x, y, size);
+                }
+            }
+        }
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            const mobile = windowWidth < 768;
+
+            // Más flores (incrementado)
+            // Aumenté la densidad de flores y añadí variaciones en tamaño y número de pétalos
+            for (let i = 0; i < 140; i++) {
+                // colocar más flores hacia la franja baja del campo
+                let fx = random(width);
+                let fy = random(height * 0.6, height * 0.9);
+                createFlower(fx, fy);
+            }
+
+            // Nubes suaves y lentas
+            for (let i = 0; i < 5; i++) {
+                clouds.push({
+                    x: random(width),
+                    y: random(height * 0.05, height * 0.25),
+                    size: random(100, 180),
+                    speed: random(0.08, 0.15),
+                    opacity: random(160, 220),
+                    offset: random(1000)
+                });
+            }
+
+            // Césped
+            for (let i = 0; i < 150; i++) {
+                grassBlades.push({
+                    x: random(width),
+                    y: random(height * 0.85, height),
+                    height: random(10, 30),
+                    sway: random(-0.02, 0.02),
+                    color: color(random(30, 70), random(120, 180), random(30, 60))
+                });
+            }
+
+            sun = {
+                x: width * 0.8,
+                y: height * 0.12,
+                size: mobile ? 60 : 80,
+                glow: 0
+            };
+        }
+
+        function createFlower(x, y) {
+            // añadir algo más de variedad: tamaños más pequeños/agrandados y pétalos variados
+            let size = random(12, 48);
+            let petals = Math.floor(random(6, 14));
+            flowers.push({
+                x: x,
+                y: y,
+                size: size,
+                petals: petals,
+                rotation: random(TWO_PI),
+                rotationSpeed: random(-0.03, 0.03),
+                brightness: random(0.7, 1.3)
+            });
+        }
+
+        // Permitir regenerar las flores con la tecla 'r' (bajo riesgo, mejora UX)
+        function keyPressed() {
+            if (key === 'r' || key === 'R') {
+                flowers = [];
+                for (let i = 0; i < 140; i++) {
+                    createFlower(random(width), random(height * 0.6, height * 0.9));
+                }
+            }
+        }
+
+        function draw() {
+            // Cielo con degradado
+            let skyGradient = drawingContext.createLinearGradient(0, 0, 0, height);
+            skyGradient.addColorStop(0, color(135, 206, 250));
+            skyGradient.addColorStop(1, color(200, 230, 255));
+            drawingContext.fillStyle = skyGradient;
+            drawingContext.fillRect(0, 0, width, height);
+
+            // Dibujando montañas en el fondo
+            drawMountains();
+
+            // Dibujando prados verdes
+            drawMeadows();
+
+            // drawClouds();
+            drawSun();
+            drawField();
+            drawGrass();
+            drawFlowers();
+            drawFlyingPetals();
+            drawMessage();
+        }
+
+        function drawClouds() {
+            push();
+            noStroke();
+            for (let cloud of clouds) {
+                let x = cloud.x;
+                let y = cloud.y;
+                let sz = cloud.size;
+                let op = cloud.opacity;
+
+                // Dibujar nube con varios círculos suaves
+                fill(255, 255, 255, op);
+                for (let i = 0; i < 7; i++) {
+                    let angle = (TWO_PI / 7) * i + cloud.offset;
+                    let cx = x + cos(angle) * sz * 0.3;
+                    let cy = y + sin(angle) * sz * 0.15;
+                    let cs = sz * random(0.5, 0.9);
+                    ellipse(cx, cy, cs);
+                }
+
+                cloud.x += cloud.speed;
+                if (cloud.x > width + sz) cloud.x = -sz;
+            }
+            pop();
+        }
+
+        function drawSun() {
+            push();
+            sun.glow = sin(frameCount * 0.02) * 5;
+            stroke(255, 255, 150, 80);
+            strokeWeight(2);
+            for (let i = 0; i < 12; i++) {
+                let angle = (TWO_PI / 12) * i + frameCount * 0.01;
+                let x1 = sun.x + cos(angle) * (sun.size + sun.glow);
+                let y1 = sun.y + sin(angle) * (sun.size + sun.glow);
+                let x2 = sun.x + cos(angle) * (sun.size + 20);
+                let y2 = sun.y + sin(angle) * (sun.size + 20);
+                line(x1, y1, x2, y2);
+            }
+            for (let r = sun.size + sun.glow; r > 0; r--) {
+                let alpha = map(r, 0, sun.size + sun.glow, 255, 50);
+                fill(255, 255, 200, alpha);
+                noStroke();
+                ellipse(sun.x, sun.y, r * 2);
+            }
+            pop();
+        }
+
+        function drawField() {
+            for (let y = height * 0.7; y <= height; y++) {
+                let inter = map(y, height * 0.7, height, 0, 1);
+                let c = lerpColor(color(120, 200, 120), color(60, 140, 60), inter);
+                stroke(c);
+                line(0, y, width, y);
+            }
+        }
+
+        function drawGrass() {
+            push();
+            for (let grass of grassBlades) {
+                stroke(grass.color);
+                strokeWeight(1);
+                let sway = sin(frameCount * 0.02 + grass.x * 0.01) * grass.sway;
+                push();
+                translate(grass.x, grass.y);
+                rotate(sway);
+                line(0, 0, 0, -grass.height);
+                pop();
+            }
+            pop();
+        }
+
+        function drawFlowers() {
+            for (let flower of flowers) {
+                push();
+                translate(flower.x, flower.y);
+                rotate(flower.rotation);
+                fill(255, 255, 100 * flower.brightness, 200);
+                noStroke();
+                for (let i = 0; i < flower.petals; i++) {
+                    push();
+                    rotate((TWO_PI / flower.petals) * i);
+                    beginShape();
+                    vertex(0, 0);
+                    bezierVertex(-flower.size / 5, -flower.size / 2,
+                               flower.size / 5, -flower.size / 2,
+                               0, -flower.size);
+                    bezierVertex(-flower.size / 5, -flower.size / 2,
+                               -flower.size / 5, -flower.size / 2,
+                               0, 0);
+                    endShape(CLOSE);
+                    pop();
+                }
+                fill(255, 200, 50, 220);
+                ellipse(0, 0, flower.size / 2.5);
+                pop();
+                flower.rotation += flower.rotationSpeed;
+            }
+        }
+
+        function drawFlyingPetals() {
+            for (let i = flyingPetals.length - 1; i >= 0; i--) {
+                let p = flyingPetals[i];
+                push();
+                translate(p.x, p.y);
+                rotate(p.rotation);
+                fill(255, 255, 150, p.alpha);
+                noStroke();
+                ellipse(0, 0, p.size, p.size * 2);
+                pop();
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.1;
+                p.rotation += p.rotSpeed;
+                p.alpha -= p.fadeSpeed;
+                if (p.alpha <= 0 || p.y > height + 50 || p.x < -50 || p.x > width + 50) {
+                    flyingPetals.splice(i, 1);
+                }
+            }
+        }
+
+        function createFlyingPetals(x, y) {
+            for (let i = 0; i < 12; i++) {
+                flyingPetals.push({
+                    x: x,
+                    y: y,
+                    size: random(3, 7),
+                    vx: random(-3, 3),
+                    vy: random(-6, -2),
+                    rotation: random(TWO_PI),
+                    rotSpeed: random(-0.2, 0.2),
+                    alpha: 255,
+                    fadeSpeed: random(2, 4)
+                });
+            }
+        }
+
+        function drawMessage() {
+            if (messageOpacity < 255) messageOpacity += 2;
+            push();
+            textAlign(CENTER, CENTER);
+            textSize(windowWidth < 768 ? 34 : 50);
+            fill(0, 0, 0, messageOpacity * 0.4);
+            text("Tus flores amarillas Pau", width / 2 + 2, height / 2 + 2);
+            fill(255, 255, 100, messageOpacity);
+            text("Tus flores amarillas Pau", width / 2, height / 2);
+            pop();
+        }
+
+        function checkFlowerTouch(x, y) {
+            for (let flower of flowers) {
+                if (dist(x, y, flower.x, flower.y) < flower.size) {
+                    createFlyingPetals(flower.x, flower.y);
+                    break;
+                }
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+            sun.x = width * 0.8;
+            sun.y = height * 0.12;
+        }
+
+        function mousePressed() {
+            checkFlowerTouch(mouseX, mouseY);
+        }
+
+        function touchStarted() {
+            checkFlowerTouch(touchX, touchY);
+            return false;
+        }
+
+        function touchMoved() {
+            return false;
+        }
+    </script>
+</body>
+</html>
